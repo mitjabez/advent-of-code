@@ -1,2 +1,6 @@
 #!/bin/sh
-paste -sd+ input.txt | sed s/++/\\n/g | bc | nl | sort -k2 -nr | head -n1
+echo "Elf with most calories:"
+paste -sd+ input.txt | sed s/++/\\n/g | bc | sort -nr | head -n1
+
+echo "Cals of top 3 Elves:"
+paste -sd+ input.txt | sed s/++/\\n/g | bc | sort -nr | head -n3 | paste -sd+ | bc
