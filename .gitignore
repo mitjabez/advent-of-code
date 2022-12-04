@@ -1,6 +1,7 @@
 *.sw*
 *.out
 .idea
+out/
 input.txt
 input-test.txt
 
