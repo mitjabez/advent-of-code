@@ -3,10 +3,8 @@ import java.io.File
 fun solve(distinctSize: Int) {
     val answer = File("input.txt").readText()
         .windowed(distinctSize)
-        .mapIndexed { pos, buffer -> Pair(pos + distinctSize, buffer.toSet()) }
-        .find { it.second.size == distinctSize }
-        ?.first
-    println(answer)
+        .indexOfFirst { it.toSet().size == distinctSize  }
+    println(answer + distinctSize)
 }
 
 fun main() {
