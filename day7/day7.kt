@@ -4,8 +4,8 @@ import java.util.stream.Stream
 
 private fun readInput(): Stream<String> = Files.lines(Paths.get("input.txt"))
 
-data class Node(val name: String, var size: Long = 0, val isDir: Boolean, val parent: Node?) {
-    fun addSize(newSize: Long) {
+data class Node(val name: String, var size: Int = 0, val isDir: Boolean, val parent: Node?) {
+    fun addSize(newSize: Int) {
         this.size += newSize
         var parent = this.parent
         while (parent != null) {
@@ -17,10 +17,10 @@ data class Node(val name: String, var size: Long = 0, val isDir: Boolean, val pa
 
 fun readDirs(): List<Node> {
     var currentDir: Node? = null
-    val dirs = ArrayList<Node>()
+    val dirs = mutableListOf<Node>()
 
     val input = readInput()
-        .filter{ !it.startsWith("dir") && !it.startsWith("$ ls")}
+        .filter{ !it.startsWith("dir") && !it.startsWith("$ ls") && !it.startsWith("dir")}
         .toList()
 
     for (line in input) {
@@ -31,10 +31,8 @@ fun readDirs(): List<Node> {
             dirs.add(currentDir)
         } else {
             val (size, fileName) = line.split(" ")
-            if (fileName != "dir") {
-                val file = Node(name = fileName, isDir = false, parent = currentDir)
-                file.addSize(size.toLong())
-            }
+            val file = Node(name = fileName, isDir = false, parent = currentDir)
+            file.addSize(size.toInt())
         }
     }
 
@@ -50,7 +48,6 @@ fun part1(dirs: List<Node>) {
 fun part2(dirs: List<Node>) {
     val usedSize = dirs.first { it.name == "/" }.size
     val freeSpace = 70000000 - usedSize
-
     println(dirs
         .filter { freeSpace + it.size >= 30000000 }
         .minBy { it.size }
