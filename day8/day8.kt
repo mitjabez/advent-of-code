@@ -1,107 +1,57 @@
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.util.stream.Stream
 
-private fun readInput(): Stream<String> = Files.lines(Paths.get("input.txt"))
+fun getColumn(columnNo: Int, grid: List<String>): String = List(grid.size) { grid[it][columnNo] }.joinToString("")
 
-fun isVisible(x: Int, y: Int, grid: List<List<Char>>): Boolean {
-    if (x == 0 || y == 0 || x == grid.size - 1 || y == grid.size - 1)
+fun firstNonZero(value: Int, defaultValue: Int): Int = if (value > 0) value else defaultValue
+
+private fun isOnEdge(x: Int, y: Int, gridByRow: List<String>) =
+    x == 0 || y == 0 || x == gridByRow.size - 1 || y == gridByRow.size - 1
+
+fun isVisible(tree: Char, x: Int, y: Int, gridByRow: List<String>, gridByColumn: List<String>): Boolean {
+    if (isOnEdge(x, y, gridByRow))
         return true
 
-    val tree = grid[y][x]
-    if (grid[y].subList(0, x).max() < tree || grid[y].subList(x + 1, grid[y].size).max() < tree)
-        return true
-
-    var isVisible = true
-    for (yPos in 0 until y) {
-        if (grid[yPos][x] >= tree) {
-            isVisible = false
-            break
-        }
-
-    }
-
-    if (isVisible)
-        return true
-
-    isVisible = true
-    for (yPos in y + 1 until grid.size) {
-        if (grid[yPos][x] >= tree) {
-            isVisible = false
-            break
-        }
-    }
-    return isVisible
+    return (gridByRow[y].substring(0, x).max() < tree || gridByRow[y].substring(x + 1, gridByRow[y].length).max() < tree) ||
+            (gridByColumn[x].substring(0, y).max() < tree || gridByColumn[x].substring(y + 1, gridByColumn[x].length).max() < tree
+                    )
 }
 
-fun scenicScore(x: Int, y: Int, grid: List<List<Char>>): Int {
-    var totalScore = 1
+fun scenicScore(tree: Char, x: Int, y: Int, gridByRow: List<String>, gridByColumn: List<String>): Int {
+    if (isOnEdge(x, y, gridByRow))
+        return 0
 
-    val tree = grid[y][x]
-    var score = 0
-    for (yPos in y - 1 downTo 0) {
-        if (grid[yPos][x] <= tree)
-            score++
-
-        if (grid[yPos][x] == tree)
-            break
-    }
-    totalScore *= score
-    score = 0
-    for (yPos in y + 1 until grid.size) {
-        score++
-        if (grid[yPos][x] >= tree)
-            break
-    }
-    totalScore *= score
-    score = 0
-    for (xPos in x - 1 downTo 0) {
-        score++
-        if (grid[y][xPos] >= tree)
-            break
-    }
-    totalScore *= score
-    score = 0
-    for (xPos in x + 1 until grid[y].size) {
-        score++
-        if (grid[y][xPos] >= tree)
-            break
-    }
-    totalScore *= score
-    return totalScore
+    val row = gridByRow[y]
+    val column = gridByColumn[x]
+    val left = firstNonZero(row.substring(0, x).reversed().indexOfFirst { it >= tree } + 1, x)
+    val right = firstNonZero(row.substring(x + 1, row.length).indexOfFirst { it >= tree } + 1, row.length - x - 1)
+    val top = firstNonZero(column.substring(0, y).reversed().indexOfFirst { it >= tree } + 1, y)
+    val bottom = firstNonZero(column.substring(y + 1, column.length).indexOfFirst { it >= tree } + 1, column.length - y - 1)
+    return left * right * top * bottom
 }
 
-fun part2() {
-    val grid = readInput()
-        .map { it.toList() }
-        .toList()
-
-    val scores = mutableListOf<Int>()
-    for (y in grid.indices) {
-        for (x in grid[y].indices) {
-            scores.add(scenicScore(x, y, grid))
+fun part2(gridByRow: List<String>, gridByColumn: List<String>) {
+    val score = gridByRow.flatMapIndexed { y, row ->
+        row.mapIndexed { x, tree ->
+            scenicScore(tree, x, y, gridByRow, gridByColumn)
         }
-    }
-    println(scores.max())
+    }.max()
+    println(score)
 }
 
-fun part1() {
-    val grid = readInput()
-        .map { it.toList() }
-        .toList()
-
-    var visible = 0
-    for (y in grid.indices) {
-        for (x in grid[y].indices) {
-            if (isVisible(x, y, grid)) {
-                visible++
-            }
+fun part1(gridByRow: List<String>, gridByColumn: List<String>) {
+    val visible = gridByRow.flatMapIndexed { y, row ->
+        row.mapIndexed { x, tree ->
+            isVisible(tree, x, y, gridByRow, gridByColumn)
         }
-    }
+    }.count { it }
     println(visible)
 }
 
 fun main() {
-    part1()
-    part2()
+    val gridByRow = Files.lines(Paths.get("input.txt")).toList()
+    val gridByColumn = gridByRow[0].indices.map { getColumn(it, gridByRow) }
+
+    part1(gridByRow, gridByColumn)
+    part2(gridByRow, gridByColumn)
 }
