@@ -7,15 +7,6 @@ import (
 	"strconv"
 )
 
-type Result struct {
-	Part1 int
-	Part2 int
-}
-
-func clamp(n int, maxn int, minn int) int {
-	return min(max(n, minn), maxn)
-}
-
 func isDigit(c byte) bool {
 	return c >= '0' && c <= '9'
 }
@@ -24,90 +15,64 @@ func isSymbol(c byte) bool {
 	return c != '.' && !isDigit(c)
 }
 
-func extractNumber(line string, xstart int) (int, int) {
-	digit := ""
-	nums := []int{0, 0}
-	n := 0
-	lastDigit := false
-	for x := xstart; x < min(xstart+3, len(line)); x++ {
-		if isDigit(line[x]) && !lastDigit {
-			lastDigit = true
-			xx := x
-			// Find first digit
-			for {
-				xx--
-				if xx == -1 || !isDigit(line[xx]) {
-					xx++
-					break
-				}
-
-			}
-
-			for {
-				if xx > len(line)-1 || !isDigit(line[xx]) {
-					break
-				}
-
-				digit += string(line[xx])
-				xx++
-			}
-			nums[n], _ = strconv.Atoi(digit)
-			n++
-		}
-
-		if !isDigit(line[x]) {
-			lastDigit = false
-		}
-	}
-
-	return nums[0], nums[1]
+type Pos struct {
+	x int
+	y int
 }
 
 func solve(input []string) (int, int) {
 	part1 := 0
 	part2 := 0
+	gears := map[Pos][]int{}
 
 	for y, line := range input {
-		for x, c := range []byte(line) {
-			if isSymbol(c) {
-				isGear := c == '*'
-				gears := []int{}
+		for x := 0; x < len(line); x++ {
+			digit := ""
+			hasAdj := false
+			hasStar := false
+			var starPos Pos
+			if isDigit(line[x]) {
+				for {
+					digit += string(line[x])
 
-				if y > 0 {
-					// below
-					num1, num2 := extractNumber(input[y-1], x-1)
-					part1 += num1 + num2
-					// if isGear && num > 0 {
-					// 	gears = append(gears, num)
-					// }
-				}
-				if y < len(input)-1 {
-					// above
-					num1, num2 := extractNumber(input[y+1], x-1)
-					part1 += num1 + num2
-					// if isGear && num > 0 {
-					// 	gears = append(gears, num)
-					// }
-				}
-				if x > 0 && isDigit(input[y][x-1]) {
-					num, _ := extractNumber(input[y], x-1)
-					part1 += num
-					if isGear && num > 0 {
-						gears = append(gears, num)
+					for yy := max(0, y-1); yy < min(y+2, len(input)); yy++ {
+						for xx := max(0, x-1); xx < min(x+2, len(line)); xx++ {
+							if yy == y && xx == x {
+								continue
+							}
+							c := input[yy][xx]
+							if isSymbol(c) {
+								hasAdj = true
+								if c == '*' {
+									hasStar = true
+									starPos = Pos{x: xx, y: yy}
+								}
+							}
+						}
 					}
-				}
-				if x < len(line)-2 && isDigit(input[y][x+1]) {
-					num, _ := extractNumber(input[y], x+1)
-					part1 += num
-					if isGear && num > 0 {
-						gears = append(gears, num)
+
+					x++
+
+					if x > len(line)-1 || !isDigit(line[x]) {
+						break
 					}
 				}
 
-				if len(gears) == 2 {
-					part2 += gears[0] * gears[1]
+				if hasAdj {
+					numDigit, _ := strconv.Atoi(digit)
+					part1 += numDigit
+
+					if hasStar {
+						gears[starPos] = append(gears[starPos], numDigit)
+					}
 				}
 			}
+		}
+	}
+
+	for _, gearsForPos := range gears {
+		if len(gearsForPos) == 2 {
+			part2 += gearsForPos[0] * gearsForPos[1]
 		}
 	}
 
