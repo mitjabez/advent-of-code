@@ -24,73 +24,94 @@ func isSymbol(c byte) bool {
 	return c != '.' && !isDigit(c)
 }
 
-func hasAdjacentSymbol(part []byte) bool {
-	for _, c := range part {
-		if isSymbol(c) {
-			return true
+func extractNumber(line string, xstart int) (int, int) {
+	digit := ""
+	nums := []int{0, 0}
+	n := 0
+	lastDigit := false
+	for x := xstart; x < min(xstart+3, len(line)); x++ {
+		if isDigit(line[x]) && !lastDigit {
+			lastDigit = true
+			xx := x
+			// Find first digit
+			for {
+				xx--
+				if xx == -1 || !isDigit(line[xx]) {
+					xx++
+					break
+				}
+
+			}
+
+			for {
+				if xx > len(line)-1 || !isDigit(line[xx]) {
+					break
+				}
+
+				digit += string(line[xx])
+				xx++
+			}
+			nums[n], _ = strconv.Atoi(digit)
+			n++
+		}
+
+		if !isDigit(line[x]) {
+			lastDigit = false
 		}
 	}
-	return false
+
+	return nums[0], nums[1]
 }
 
-type Pos struct {
-	x int
-	y int
-}
-
-func solve(input []string) Result {
-	digits := []string{}
+func solve(input []string) (int, int) {
+	part1 := 0
+	part2 := 0
 
 	for y, line := range input {
-		lastDigit := ""
-		hasAdjSymbol := false
 		for x, c := range []byte(line) {
-			if !isDigit(c) {
-				if hasAdjSymbol {
-					digits = append(digits, lastDigit)
+			if isSymbol(c) {
+				isGear := c == '*'
+				gears := []int{}
+
+				if y > 0 {
+					// below
+					num1, num2 := extractNumber(input[y-1], x-1)
+					part1 += num1 + num2
+					// if isGear && num > 0 {
+					// 	gears = append(gears, num)
+					// }
 				}
-				lastDigit = ""
-				hasAdjSymbol = false
-				continue
-			}
+				if y < len(input)-1 {
+					// above
+					num1, num2 := extractNumber(input[y+1], x-1)
+					part1 += num1 + num2
+					// if isGear && num > 0 {
+					// 	gears = append(gears, num)
+					// }
+				}
+				if x > 0 && isDigit(input[y][x-1]) {
+					num, _ := extractNumber(input[y], x-1)
+					part1 += num
+					if isGear && num > 0 {
+						gears = append(gears, num)
+					}
+				}
+				if x < len(line)-2 && isDigit(input[y][x+1]) {
+					num, _ := extractNumber(input[y], x+1)
+					part1 += num
+					if isGear && num > 0 {
+						gears = append(gears, num)
+					}
+				}
 
-			lastDigit += string(c)
-
-			if y > 0 {
-				above := input[y-1][max(x-1, 0):min(x+2, len(line))]
-				if hasAdjacentSymbol([]byte(above)) {
-					hasAdjSymbol = true
+				if len(gears) == 2 {
+					part2 += gears[0] * gears[1]
 				}
 			}
-
-			if y < len(input)-1 {
-				below := input[y+1][max(x-1, 0):min(x+2, len(line))]
-				if hasAdjacentSymbol([]byte(below)) {
-					hasAdjSymbol = true
-				}
-			}
-
-			if x > 0 && isSymbol(line[x-1]) {
-				hasAdjSymbol = true
-			}
-
-			if x < len(line)-1 && isSymbol(line[x+1]) {
-				hasAdjSymbol = true
-			}
-		}
-
-		if hasAdjSymbol {
-			digits = append(digits, lastDigit)
 		}
 	}
 
-	part1 := 0
-	for _, digit := range digits {
-		num, _ := strconv.Atoi(digit)
-		part1 += num
-	}
-
-	return Result{Part1: part1}
+	return part1, part2
 }
 
 func input() []string {
@@ -114,6 +135,7 @@ func input() []string {
 func main() {
 	input := input()
 
-	result := solve(input)
-	fmt.Println("Part1:", result.Part1)
+	part1, part2 := solve(input)
+	fmt.Println("Part1:", part1)
+	fmt.Println("Part2:", part2)
 }
