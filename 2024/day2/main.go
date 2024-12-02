@@ -8,6 +8,27 @@ import (
 	"strings"
 )
 
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+func getSign(a int) int {
+	if a < 0 {
+		return -1
+	}
+	return 1
+}
+
+func delete(slice []int, i int) []int {
+	newSlice := make([]int, len(slice))
+	copy(newSlice, slice)
+	removed := append(newSlice[:i], newSlice[i+1:]...)
+	return removed
+}
+
 func input() [][]int {
 	scanner := bufio.NewScanner(os.Stdin)
 
@@ -30,41 +51,22 @@ func input() [][]int {
 
 	return input
 }
-func abs(x int) int {
-	if x < 0 {
-		return -x
+
+func isSafe(report []int) (bool, int) {
+	sign := getSign(report[1] - report[0])
+	for i := 1; i < len(report); i++ {
+		delta := report[i] - report[i-1]
+		if getSign(delta) != sign || abs(delta) < 1 || abs(delta) > 3 {
+			return false, i
+		}
 	}
-	return x
-}
-
-func isGradual(a int, b int) bool {
-	diff := abs(a - b)
-	return diff >= 1 && diff <= 3
-}
-
-func sign(a int) bool {
-	return a < 0
+	return true, 0
 }
 
 func part1(input [][]int) int {
 	total := 0
-	for _, line := range input {
-		isSafeReport := true
-		var isNegative bool
-		for n, curLevel := range line {
-			if n == 0 {
-				continue
-			}
-
-			lastLevel := line[n-1]
-			if n == 1 {
-				isNegative = sign(curLevel - lastLevel)
-			}
-			if !isGradual(curLevel, lastLevel) || sign(curLevel-lastLevel) != isNegative {
-				isSafeReport = false
-				break
-			}
-		}
+	for _, report := range input {
+		isSafeReport, _ := isSafe(report)
 		if isSafeReport {
 			total++
 		}
@@ -72,46 +74,16 @@ func part1(input [][]int) int {
 	return total
 }
 
-func isSafe(report []int) (bool, int) {
-	var isNegative bool
-	for n, curLevel := range report {
-		if n == 0 {
-			continue
-		}
-
-		lastLevel := report[n-1]
-		if n == 1 {
-			isNegative = sign(curLevel - lastLevel)
-		}
-		if !isGradual(curLevel, lastLevel) || sign(curLevel-lastLevel) != isNegative {
-			return false, n
-		}
-	}
-	return true, 0
-}
-
-func delete(slice []int, i int) []int {
-	newSlice := make([]int, len(slice))
-	copy(newSlice, slice)
-	removed := append(newSlice[:i], newSlice[i+1:]...)
-	return removed
-}
-
 func part2(input [][]int) int {
 	total := 0
 	for _, report := range input {
 		isSafeReport, unsafeNum := isSafe(report)
-		// 314,339 wrong (343?)
 		if !isSafeReport {
-			cleanedReport := delete(report, unsafeNum-1)
-			isSafeReport, _ = isSafe(cleanedReport)
-			if !isSafeReport {
-				fmt.Println(report)
-				cleanedReport = delete(report, unsafeNum)
-				isSafeReport, unsafeNum = isSafe(cleanedReport)
-				if !isSafeReport && unsafeNum > 1 {
-					cleanedReport = delete(report, unsafeNum-2)
-					isSafeReport, _ = isSafe(cleanedReport)
+			for i := max(unsafeNum-2, 0); i <= unsafeNum; i++ {
+				cleanedReport := delete(report, i)
+				isSafeReport, _ = isSafe(cleanedReport)
+				if isSafeReport {
+					break
 				}
 			}
 		}
