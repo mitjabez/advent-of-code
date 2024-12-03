@@ -10,22 +10,24 @@ import (
 
 var reDigit = regexp.MustCompile(`\d+`)
 
-func deque(queue [][]int) []int {
+func deque(queue [][]int) ([]int, [][]int) {
 	if len(queue) == 0 {
 		panic("No more items in queue")
 	}
 
 	n := queue[0]
-	queue = queue[1:]
-	return n
+	return n, queue[1:]
 }
 
 func peek(queue [][]int) []int {
-	if len(queue) == 0 {
-		return nil
-	}
-
 	return queue[0]
+}
+
+func compute(mul string) int {
+	digits := reDigit.FindAllString(mul, -1)
+	n1, _ := strconv.Atoi(digits[0])
+	n2, _ := strconv.Atoi(digits[1])
+	return n1 * n2
 }
 
 func input() []string {
@@ -45,14 +47,6 @@ func input() []string {
 
 	return input
 }
-
-func compute(mul string) int {
-	digits := reDigit.FindAllString(mul, -1)
-	n1, _ := strconv.Atoi(digits[0])
-	n2, _ := strconv.Atoi(digits[1])
-	return n1 * n2
-}
-
 func part1(input []string) int {
 	total := 0
 	reMul := regexp.MustCompile(`mul\(\d+,\d+\)`)
@@ -62,33 +56,6 @@ func part1(input []string) int {
 		}
 	}
 	return total
-}
-
-func isEnabled(mulStart int, dos [][]int, donts [][]int) bool {
-	doPos := -1
-	for i, do := range dos {
-		if do[0] > mulStart {
-			doPos = i - 1
-			break
-		}
-	}
-	dontPos := -1
-	for i, dont := range donts {
-		if dont[0] > mulStart {
-			dontPos = i - 1
-			break
-		}
-	}
-
-	if dontPos < 0 {
-		return true
-	}
-
-	if doPos < 0 {
-		return false
-	}
-
-	return dos[doPos][0] >= donts[dontPos][0]
 }
 
 func part2(input []string) int {
@@ -102,25 +69,23 @@ func part2(input []string) int {
 		dos := reDo.FindAllStringIndex(line, -1)
 		donts := reDont.FindAllStringIndex(line, -1)
 		muls := reMul.FindAllStringIndex(line, -1)
-		doi := 0
-		donti := 0
-		muli := 0
+		var curMul []int
 
 		for i := 0; i < len(line); i++ {
-			if doi < len(dos) && dos[doi][0] == i {
+			if len(dos) > 0 && peek(dos)[0] == i {
 				enabled = true
-				doi++
+				_, dos = deque(dos)
 			}
-			if donti < len(donts) && donts[donti][0] == i {
+			if len(donts) > 0 && peek(donts)[0] == i {
 				enabled = false
-				donti++
+				_, donts = deque(donts)
 			}
-			if muli < len(muls) && muls[muli][0] == i {
+			if len(muls) > 0 && peek(muls)[0] == i {
+				curMul, muls = deque(muls)
 				if enabled {
-					mul := line[muls[muli][0]:muls[muli][1]]
+					mul := line[curMul[0]:curMul[1]]
 					total += compute(mul)
 				}
-				muli++
 			}
 		}
 
@@ -131,6 +96,6 @@ func part2(input []string) int {
 func main() {
 	input := input()
 
-	// fmt.Println(part1(input))
+	fmt.Println(part1(input))
 	fmt.Println(part2(input))
 }
