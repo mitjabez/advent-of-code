@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 )
@@ -45,33 +46,33 @@ func solve(input []string) (int, int) {
 		line := input[y]
 		for x := 0; x < len(line); x++ {
 			hor := line[x:min(len(line), x+4)]
-			ver := ""
-			diagR := ""
-			diagL := ""
+			var ver bytes.Buffer
+			var diagR bytes.Buffer
+			var diagL bytes.Buffer
 			for yy := y; yy < min(len(input), y+4); yy++ {
-				ver += string(input[yy][x])
+				ver.WriteByte(input[yy][x])
 			}
 			for pos := 0; pos < 4; pos++ {
 				if y+pos >= len(input) {
 					break
 				}
 				if x+pos < len(line) {
-					diagR += string(input[y+pos][x+pos])
+					diagR.WriteByte(input[y+pos][x+pos])
 				}
 				if x-pos >= 0 {
-					diagL += string(input[y+pos][x-pos])
+					diagL.WriteByte(input[y+pos][x-pos])
 				}
 			}
 
-			if y < len(input)-2 && len(hor) >= 3 && len(diagR) >= 3 {
-				diag1 := string(input[y][x]) + string(input[y+1][x+1]) + string(input[y+2][x+2])
-				diag2 := string(input[y][x+2]) + string(input[y+1][x+1]) + string(input[y+2][x])
+			if y < len(input)-2 && len(hor) >= 3 && diagR.Len() >= 3 {
+				diag1 := diagR.String()[:3]
+				diag2 := string([]byte{input[y][x+2], input[y+1][x+1], input[y+2][x]})
 				if isMas(diag1) && isMas(diag2) {
 					total2++
 				}
 			}
 
-			total1 += xmasScore(hor, ver, diagR, diagL)
+			total1 += xmasScore(hor, ver.String(), diagR.String(), diagL.String())
 		}
 	}
 	return total1, total2
