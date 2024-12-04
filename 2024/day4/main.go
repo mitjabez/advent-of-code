@@ -24,7 +24,7 @@ func input() []string {
 	return input
 }
 
-func score(words ...string) int {
+func xmasScore(words ...string) int {
 	s := 0
 	for _, w := range words {
 		if w == "XMAS" || w == "SAMX" {
@@ -34,8 +34,13 @@ func score(words ...string) int {
 	return s
 }
 
-func part1(input []string) int {
-	total := 0
+func isMas(w string) bool {
+	return w == "MAS" || w == "SAM"
+}
+
+func solve(input []string) (int, int) {
+	total1 := 0
+	total2 := 0
 	for y := 0; y < len(input); y++ {
 		line := input[y]
 		for x := 0; x < len(line); x++ {
@@ -57,13 +62,24 @@ func part1(input []string) int {
 					diagL += string(input[y+pos][x-pos])
 				}
 			}
-			total += score(hor, ver, diagR, diagL)
+
+			if y < len(input)-2 && len(hor) >= 3 && len(diagR) >= 3 {
+				diag1 := string(input[y][x]) + string(input[y+1][x+1]) + string(input[y+2][x+2])
+				diag2 := string(input[y][x+2]) + string(input[y+1][x+1]) + string(input[y+2][x])
+				if isMas(diag1) && isMas(diag2) {
+					total2++
+				}
+			}
+
+			total1 += xmasScore(hor, ver, diagR, diagL)
 		}
 	}
-	return total
+	return total1, total2
 }
 
 func main() {
 	input := input()
-	fmt.Println(part1(input))
+	part1, part2 := solve(input)
+	fmt.Println(part1)
+	fmt.Println(part2)
 }
