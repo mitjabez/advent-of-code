@@ -24,12 +24,12 @@ func input() []string {
 	return input
 }
 
+func part1(input []string) int {
+	total := 0
+	return total
+}
+
 func main() {
 	input := input()
-
-	totalPart1 := 0
-	// totalPart2 := 0
-
-	fmt.Println("Part1:", totalPart1)
-	// fmt.Println("Part2:", totalPart2)
+	fmt.Println(part1(input))
 }
