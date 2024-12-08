@@ -12,9 +12,10 @@ func input() []string {
 	var input = []string{}
 	for scanner.Scan() {
 		line := scanner.Text()
-		if line != "" {
-			input = append(input, line)
+		if line == "" {
+			continue
 		}
+		input = append(input, line)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -24,12 +25,15 @@ func input() []string {
 	return input
 }
 
-func part1(input []string) int {
-	total := 0
-	return total
+func solve(input []string) (int, int) {
+	p1 := 0
+	p2 := 0
+	return p1, p2
 }
 
 func main() {
 	input := input()
-	fmt.Println(part1(input))
+	p1, p2 := solve(input)
+	fmt.Println(p1)
+	fmt.Println(p2)
 }
