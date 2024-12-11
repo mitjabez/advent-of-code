@@ -2,15 +2,15 @@ package main
 
 import (
 	"bufio"
+	"container/list"
 	"fmt"
-	"math"
 	"os"
 )
 
 type block struct {
-	id             int
-	size, free     int
-	previous, next *block
+	id         int
+	size, free int
+	moved      bool
 }
 
 func input() []block {
@@ -22,19 +22,12 @@ func input() []block {
 		if line == "" {
 			continue
 		}
-		var prev *block
 		for i := 0; i < len(line); i += 2 {
 			free := 0
 			if i+1 < len(line) {
 				free = int(line[i+1] - '0')
 			}
 			b := block{id: i / 2, size: int(line[i] - '0'), free: free}
-			b.previous = prev
-			if prev != nil {
-				blocks[i/2-1].next = &b
-				prev.next = &b
-			}
-			prev = &b
 			blocks = append(blocks, b)
 		}
 	}
@@ -54,7 +47,6 @@ func part1(blocks []block) int {
 	pos := 0
 	processLeft := true
 	for {
-
 		if processLeft {
 			for i := 0; i < blocks[left].size; i++ {
 				checksum += left * pos
@@ -94,92 +86,61 @@ func part1(blocks []block) int {
 
 	return checksum
 }
-func printBlocks(b *block) {
-	fmt.Println("blocks:")
-	bb := b
-	for {
-		fmt.Println(bb)
-		if bb.next == nil {
-			break
-		}
-		bb = bb.next
-	}
-}
 
 func part2(blocks []block) int {
 	checksum := 0
 
-	// right := &blocks[len(blocks)-1]
-	var foundBlock *block
-	pos := len(blocks) - 1
+	l := list.New()
+	for _, b := range blocks {
+		l.PushBack(b)
+	}
 
-	var right *block
-	var tmmp *block
+	eR := l.Back()
 	for {
-		right = &blocks[pos]
-		if right.previous == nil {
+		if eR.Prev() == nil {
 			break
 		}
-		foundBlock = nil
-		b := right
-		for {
-			b = b.previous
-			// fmt.Println(b, "prev:", b.previous)
-			maxFree := math.MaxInt
-			if right.id == 2 {
-				// fmt.Println("b", b, "right", right)
-			}
-			if b.free >= right.size && b.free < maxFree {
-				maxFree = b.free
-				foundBlock = b
-			}
-			if b.previous == nil {
+		next := eR.Prev()
+
+		blockRight := eR.Value.(block)
+		if blockRight.moved {
+			eR = next
+			continue
+		}
+
+		for eL := l.Front(); eL != nil && eL != eR; eL = eL.Next() {
+			blockLeft := eL.Value.(block)
+			if blockLeft.free >= blockRight.size {
+				if eR.Prev() != nil {
+					bPrev := eR.Prev().Value.(block)
+					bPrev.free += blockRight.size + blockRight.free
+					eR.Prev().Value = bPrev
+				}
+
+				bFound := eL.Value.(block)
+
+				blockRight.free = bFound.free - blockRight.size
+				blockRight.moved = true
+				eR.Value = blockRight
+
+				bFound.free = 0
+				eL.Value = bFound
+				l.MoveAfter(eR, eL)
 				break
 			}
 		}
 
-		tmp := right.previous
-		if foundBlock != nil {
-			fmt.Println("Found block", foundBlock.id, foundBlock.free, "for:", right.id, "size:", right.size)
-			right.previous.next = right.next
-			if right.next != nil {
-				right.next.previous = right.previous
-			}
-
-			right.free = foundBlock.free - right.size
-			right.next = foundBlock.next
-			right.previous = foundBlock
-
-			foundBlock.free = 0
-			foundBlock.next.previous = right
-			foundBlock.next = right
-			tmmp = foundBlock
-
-		}
-		right = tmp
-		pos--
+		eR = next
 	}
 
-	for {
-		if tmmp.previous == nil {
-			break
-		}
-		tmmp = tmmp.previous
-	}
-
-	printBlocks(tmmp)
-	b2 := tmmp
-	pos = 0
-	for {
-		if b2.next == nil {
-			break
-		}
-		for i := 0; i < b2.size; i++ {
-			checksum += b2.id * pos
-			fmt.Print(b2.id)
+	pos := 0
+	for e := l.Front(); e != nil; e = e.Next() {
+		b := e.Value.(block)
+		for i := 0; i < b.size; i++ {
+			checksum += b.id * pos
 			pos++
 		}
-		b2 = b2.next
+		pos += b.free
 	}
 
 	return checksum
@@ -187,6 +148,10 @@ func part2(blocks []block) int {
 }
 func main() {
 	blocks := input()
-	// fmt.Println(part1(blocks))
+
+	b1 := make([]block, len(blocks))
+	copy(b1, blocks)
+	fmt.Println(part1(b1))
+
 	fmt.Println(part2(blocks))
 }
