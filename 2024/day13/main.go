@@ -2,11 +2,7 @@ package main
 
 import (
 	"bufio"
-	"container/heap"
 	"fmt"
-	"math"
-
-	// "math"
 	"os"
 	"strconv"
 	"strings"
@@ -52,161 +48,35 @@ func input() []Machine {
 	return machines
 }
 
-// func ss(p Pos, machine Machine, cost int, visited map[Pos]int) int {
-// 	visited[p] = cost
-//
-// 	if p == machine.prize {
-// 		return cost
-// 	}
-// 	return min(ss(Pos{p.x + machine.a.x, p.y + machine.a.y}, machine, cost+3, visited),
-// 		ss(Pos{p.x + machine.b.x, p.y + machine.b.y}, machine, cost+1, visited))
-// }
-
-type Item struct {
-	value    Pos // The value of the item; arbitrary.
-	priority int // The priority of the item in the queue.
-	btns     Pos
-	// The index is needed by update and is maintained by the heap.Interface methods.
-	index int // The index of the item in the heap.
-}
-
-type PriorityQueue []*Item
-
-func (pq PriorityQueue) Len() int { return len(pq) }
-
-func (pq PriorityQueue) Less(i, j int) bool {
-	// We want Pop to give us the highest, not lowest, priority so we use greater than here.
-	// return pq[i].priority < pq[j].priority
-	return pq[i].priority < pq[j].priority //&& (pq[i].btns.x+pq[i].btns.y < pq[j].btns.x+pq[j].btns.y)
-}
-
-func (pq PriorityQueue) Swap(i, j int) {
-	pq[i], pq[j] = pq[j], pq[i]
-	pq[i].index = i
-	pq[j].index = j
-}
-
-func (pq *PriorityQueue) Push(x any) {
-	n := len(*pq)
-	item := x.(*Item)
-	item.index = n
-	*pq = append(*pq, item)
-}
-
-func (pq *PriorityQueue) Pop() any {
-	old := *pq
-	n := len(old)
-	item := old[n-1]
-	old[n-1] = nil  // don't stop the GC from reclaiming the item eventually
-	item.index = -1 // for safety
-	*pq = old[0 : n-1]
-	return item
-}
-
-// update modifies the priority and value of an Item in the queue.
-func (pq *PriorityQueue) update(item *Item, value Pos, priority int) {
-	item.value = value
-	item.priority = priority
-	heap.Fix(pq, item.index)
-}
-
-func minDistance(dists map[Pos]int, spts map[Pos]bool) Pos {
-	minCost := math.MaxInt
-
-	var minPos Pos
-	for d, cost := range dists {
-		if cost < minCost && !spts[d] {
-			minCost = cost
-			minPos = d
-		}
+func compute(m Machine) (int, int) {
+	b := (m.prize.y*m.a.x - m.prize.x*m.a.y) / (m.b.y*m.a.x - m.b.x*m.a.y)
+	a := (m.prize.x - (b * m.b.x)) / m.a.x
+	if a*m.a.x+b*m.b.x == m.prize.x && a*m.a.y+b*m.b.y == m.prize.y {
+		return a, b
+	} else {
+		return 0, 0
 	}
-	return minPos
-}
-func push(pq *PriorityQueue, pos Pos, priority int, btns Pos) {
-	item := &Item{
-		value:    pos,
-		priority: priority,
-		btns:     btns,
-	}
-	heap.Push(pq, item)
+
 }
 
-func djikstra(machine Machine) int {
-	start := Pos{0, 0}
-	dists := make(map[Pos]int)
-	dists[start] = 0
-	btns := 0
-
-	dpq := make(PriorityQueue, 0)
-	heap.Init(&dpq)
-	push(&dpq, start, 0, Pos{})
-
-	spts := make(map[Pos]bool)
-
-	// maxRep := 10
-	// i := 0
-	for {
-		btns++
-		item := heap.Pop(&dpq).(*Item)
-		minPos := item.value
-
-		// fmt.Println(minPos)
-		// fmt.Println("spts", spts)
-		// fmt.Println("dists", dists)
-		// fmt.Println("--------------------------")
-		// i++
-		// if i == maxRep {
-		// 	return 0
-		// }
-
-		if minPos == machine.prize {
-			return item.priority
-		}
-
-		if item.btns.x > 100 && item.btns.y > 100 {
-			// Not found
-			return 0
-		}
-
-		// if minPos.x > machine.prize.x+1000 && minPos.y > machine.prize.y+1000 {
-		// 	return 0
-		// }
-
-		spts[minPos] = true
-		da := Pos{minPos.x + machine.a.x, minPos.y + machine.a.y}
-		db := Pos{minPos.x + machine.b.x, minPos.y + machine.b.y}
-
-		// Update dist value of the adjacent vertices
-		// of the picked vertex only if the current
-		// distance is greater than new distance and
-		// the vertex in not in the shortest path tree
-		curDist, ok := dists[da]
-		if !spts[da] && (!ok || curDist > dists[minPos]+3) {
-			dists[da] = dists[minPos] + 3
-			push(&dpq, da, dists[minPos]+3, Pos{item.btns.x + 1, item.btns.y})
-		}
-		curDist, ok = dists[db]
-		if !spts[db] && (!ok || curDist > dists[minPos]+1) {
-			dists[db] = dists[minPos] + 1
-			push(&dpq, db, dists[minPos]+1, Pos{item.btns.x, item.btns.y + 1})
-		}
-	}
-}
-
-func solve(machines []Machine) int {
+func solve(machines []Machine) (int, int) {
 	p1 := 0
-	for i, m := range machines {
-		fmt.Printf("%d. Searching ... ", i+1)
-		r := djikstra(m)
-		fmt.Println(r)
-		p1 += r
+	p2 := 0
+	for _, m := range machines {
+		a, b := compute(m)
+		p1 += a*3 + b*1
+
+		m.prize.x += 10000000000000
+		m.prize.y += 10000000000000
+		a, b = compute(m)
+		p2 += a*3 + b*1
 	}
-	return p1
+	return p1, p2
 }
 
 func main() {
 	machines := input()
-	fmt.Println(solve(machines))
-	// fmt.Println(p1)
-	// fmt.Println(p2)
+	p1, p2 := solve(machines)
+	fmt.Println(p1)
+	fmt.Println(p2)
 }
