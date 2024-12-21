@@ -54,8 +54,8 @@ main() {
   curl -sS -H "Cookie: $AOC_COOKIE" "$base_url/input" -o "$day_dir/input"
   log "Downloading input.test ..."
   curl -sS -H "Accept: text/html" -H "Cookie: $AOC_COOKIE" "$base_url" |
-    grep -m 1 -A 20 "<pre><code>" |
-    grep -B 20 "</pre>" |
+    grep -m 1 -A 40 "<pre><code>" |
+    grep -m 1 -B 20 "</pre>" |
     sed "s/<\/*pre>//;s/<\/*code>//" |
     grep -v "^$" > "$day_dir/input.test"
 
