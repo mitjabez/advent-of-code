@@ -6,11 +6,21 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 )
+
+// Part1 was solved using raw grid
+// Part2 was solved using hashmaps
 
 type Pos struct {
 	x, y int
+}
+
+type Maze struct {
+	start Pos
+	walls map[Pos]bool
+	boxes map[Pos]bool
+	moves []byte
+	size  Pos
 }
 
 // Initial position, boxes, moves
@@ -48,6 +58,29 @@ func input() ([][]byte, []byte, Pos) {
 	return maze, moves, start
 }
 
+func getMappedMaze(rawMaze [][]byte, moves []byte, start Pos) Maze {
+	walls := make(map[Pos]bool)
+	boxes := make(map[Pos]bool)
+
+	for y := range rawMaze {
+		for x, c := range rawMaze[y] {
+			if c == 'O' {
+				boxes[Pos{x * 2, y}] = true
+			} else if c == '#' {
+				walls[Pos{x * 2, y}] = true
+				walls[Pos{x*2 + 1, y}] = true
+			}
+		}
+	}
+	return Maze{
+		start: Pos{start.x * 2, start.y},
+		walls: walls,
+		boxes: boxes,
+		moves: moves,
+		size:  Pos{len(rawMaze[0]) * 2, len(rawMaze)},
+	}
+}
+
 func popPos(queue []Pos) (Pos, []Pos) {
 	if len(queue) == 0 {
 		panic("No more items in queue")
@@ -56,6 +89,7 @@ func popPos(queue []Pos) (Pos, []Pos) {
 	p := queue[len(queue)-1]
 	return p, queue[0 : len(queue)-1]
 }
+
 func popByte(queue []byte) (byte, []byte) {
 	if len(queue) == 0 {
 		panic("No more items in queue")
@@ -122,7 +156,6 @@ func part1(maze [][]byte, moves []byte, start Pos) int {
 				p = pn
 				break
 			} else if c == 'O' {
-				// qc = append(qc, c)
 			} else {
 				panic("Unknown char " + string(c))
 			}
@@ -191,40 +224,29 @@ func draw2(current Pos, walls map[Pos]bool, boxes map[Pos]bool, size Pos) {
 func part2(maze Maze) int {
 	p := maze.start
 	boxes := maze.boxes
-	draw2(p, maze.walls, boxes, maze.size)
-	for i, d := range maze.moves {
+	for _, d := range maze.moves {
 		dir := direction(d)
-		// fmt.Println(dir)
 		pn := p
-		fmt.Printf("%d. %s\n", i+1, string(d))
 		movedBoxes := make(map[Pos]bool)
 		endMove := false
 
 		bounds := []int{p.x + dir.x}
-		// newBounds := []int{pn.x, pn.x}
 
 		for {
 			pn = Pos{pn.x + dir.x, pn.y + dir.y}
 			if dir.y != 0 {
-				// bounds[0] = min(bounds[0], pn.x)
-				// bounds[1] = max(bounds[1], pn.x)
 			} else {
-				// bounds[0] = pn.x
-				// bounds[1] = pn.x
 				bounds = []int{pn.x}
 			}
 
 			newBounds := []int{}
-			// copy(newBounds, bounds)
 			isDot := true
 
 			mb := make(map[int]bool)
 			for _, x := range bounds {
 				mb[x] = true
 			}
-			fmt.Println("B:", bounds, "mb:", mb, "y:", pn.y)
-			fmt.Println(movedBoxes)
-			for x, _ := range mb {
+			for x := range mb {
 				px := Pos{x, pn.y}
 				box, hasBox := getBox(px, boxes)
 				if isWall(px, maze.walls) {
@@ -236,8 +258,6 @@ func part2(maze Maze) int {
 					movedBoxes[box] = true
 					newBounds = append(newBounds, box.x)
 					newBounds = append(newBounds, box.x+1)
-					// newBounds[0] = min(box.x, newBounds[0])
-					// newBounds[1] = max(box.x+1, newBounds[1])
 				}
 			}
 
@@ -245,7 +265,6 @@ func part2(maze Maze) int {
 				break
 			}
 
-			// all dots in line so we can move
 			if isDot {
 				for box := range movedBoxes {
 					delete(boxes, box)
@@ -257,25 +276,13 @@ func part2(maze Maze) int {
 				break
 			}
 
-			// fmt.Println("Copy bounds", newBounds)
 			bounds = []int{}
-			// clear(bounds)
 			for _, b := range newBounds {
 				bounds = append(bounds, b)
 			}
-			// copy(bounds, newBounds)
 		}
-
-		// draw2(p, maze.walls, boxes, maze.size)
-		time.Sleep(time.Millisecond * 0)
 	}
 
-	// too low   1416239
-	// too high  1469871
-	// not right 1457765
-	// not right 1457766
-	// no right  1454116
-	// not right 1439968
 	total := 0
 	for box := range boxes {
 		total += box.y*100 + box.x
@@ -304,43 +311,10 @@ func doubleMaze(maze [][]byte) ([][]byte, Pos) {
 	return m2, s
 }
 
-type Maze struct {
-	start Pos
-	walls map[Pos]bool
-	boxes map[Pos]bool
-	moves []byte
-	size  Pos
-}
-
-func getMappedMaze(rawMaze [][]byte, moves []byte, start Pos) Maze {
-	walls := make(map[Pos]bool)
-	boxes := make(map[Pos]bool)
-
-	for y := range rawMaze {
-		for x, c := range rawMaze[y] {
-			if c == 'O' {
-				boxes[Pos{x * 2, y}] = true
-			} else if c == '#' {
-				walls[Pos{x * 2, y}] = true
-				walls[Pos{x*2 + 1, y}] = true
-			}
-		}
-	}
-	return Maze{
-		start: Pos{start.x * 2, start.y},
-		walls: walls,
-		boxes: boxes,
-		moves: moves,
-		size:  Pos{len(rawMaze[0]) * 2, len(rawMaze)},
-	}
-}
-
 func main() {
 	rawMaze, moves, start := input()
-	maze := getMappedMaze(rawMaze, moves, start)
-	fmt.Println(part2(maze))
+	mappedMaze := getMappedMaze(rawMaze, moves, start)
 
-	// fmt.Println(solve(maze, moves, start))
-	// fmt.Println(part1(doubleMaze, moves, doubleStart))
-	// fmt.Println(p2)
+	fmt.Println(part1(rawMaze, moves, start))
+	fmt.Println(part2(mappedMaze))
 }
