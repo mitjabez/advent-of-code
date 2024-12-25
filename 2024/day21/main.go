@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -64,114 +65,153 @@ func abs(n int) int {
 	return n
 }
 
-func path(a byte, b byte, keyMap map[byte]Pos) []byte {
-	pA := keyMap[a]
-	pB := keyMap[b]
-	x := pB.x - pA.x
-	y := pB.y - pA.y
-	path := []byte{}
-	px := Pos{pA.x + x, pA.y}
-	py := Pos{pA.x, pA.y + y}
-	if px == keyMap['X'] {
-		// move y first
-		for i := 0; i < abs(y); i++ {
-			if y > 0 {
-				path = append(path, 'v')
-			} else {
-				path = append(path, '^')
-			}
-		}
-		for i := 0; i < abs(x); i++ {
-			if x > 0 {
-				path = append(path, '>')
-			} else {
-				path = append(path, '<')
-			}
-		}
-	} else if py == keyMap['X'] {
-		// move x first
-		for i := 0; i < abs(x); i++ {
-			if x > 0 {
-				path = append(path, '>')
-			} else {
-				path = append(path, '<')
-			}
-		}
-		for i := 0; i < abs(y); i++ {
-			if y > 0 {
-				path = append(path, 'v')
-			} else {
-				path = append(path, '^')
-			}
-		}
+func sign(n int) int {
+	if n == 0 {
+		return 0
+	} else if n > 0 {
+		return 1
 	} else {
-		for i := 0; i < abs(x); i++ {
-			if x > 0 {
-				path = append(path, '>')
-			} else {
-				path = append(path, '<')
-			}
-		}
-		for i := 0; i < abs(y); i++ {
-			if y > 0 {
-				path = append(path, 'v')
-			} else {
-				path = append(path, '^')
-			}
-		}
+		return -1
 	}
-	return append(path, 'A')
 }
+
+func direction(src, dst Pos) Pos {
+	return Pos{sign(dst.x - src.x), sign(dst.y - src.y)}
+}
+
+func (a Pos) move(b Pos) Pos {
+	return Pos{a.x + b.x, a.y + b.y}
+}
+
+func getKeyMap(robotNo int) map[byte]Pos {
+	if robotNo == 0 {
+		return numKeys
+	} else {
+		return dirKeys
+	}
+}
+
+var WrongBytes []byte = []byte{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
 
 func getNum(line string) int {
 	n, _ := strconv.Atoi(strings.Replace(line, "A", "", -1))
 	return n
 }
 
-func solve(input []string) int {
+func pathSS(p, dst, dir Pos, keyMap map[byte]Pos, path []byte, checkNext bool) []byte {
+	if p == dst {
+		return append(path, 'A')
+	}
+
+	maxY := 2
+	if len(keyMap) == len(numKeys) {
+		maxY = 3
+	}
+
+	// Forbidden
+	if keyMap['X'] == p || p.x < 0 || p.x > 2 || p.y < 0 || p.y > maxY {
+		return WrongBytes
+	}
+
+	px := Pos{p.x + dir.x, p.y}
+	py := Pos{p.x, p.y + dir.y}
+
+	pathx := append([]byte{}, path...)
+	pathy := append([]byte{}, path...)
+	if dir.x > 0 {
+		pathx = append(pathx, '>')
+	} else if dir.x < 0 {
+		pathx = append(pathx, '<')
+	}
+
+	if dir.y > 0 {
+		pathy = append(pathy, 'v')
+	} else if dir.y < 0 {
+		pathy = append(pathy, '^')
+	}
+
+	xbytes := WrongBytes
+	ybytes := WrongBytes
+	lenNextX := math.MaxInt
+	lenNextY := math.MaxInt
+
+	// fmt.Println("p:", p, "dst:", dst, "dir:", dir)
+	if dir.x != 0 {
+		xbytes = pathSS(px, dst, dir, keyMap, pathx, checkNext)
+		checkNext = checkNext && len(xbytes) != len(WrongBytes)
+		if checkNext {
+			lenNextX = ss(string(xbytes), 2, false, dirKeys)
+		}
+	}
+	if dir.y != 0 {
+		ybytes = pathSS(py, dst, dir, keyMap, pathy, checkNext)
+		checkNext = checkNext && len(ybytes) != len(WrongBytes)
+		if checkNext {
+			lenNextY = ss(string(ybytes), 2, false, dirKeys)
+		}
+	}
+
+	if len(xbytes) == len(WrongBytes) && len(ybytes) == len(WrongBytes) {
+		return WrongBytes
+	}
+
+	if checkNext {
+		if lenNextX < lenNextY {
+			return xbytes
+		} else {
+			return ybytes
+		}
+	}
+
+	if len(xbytes) < len(ybytes) {
+		return xbytes
+
+	}
+	return ybytes
+}
+
+func ss(origLine string, depth int, checkNext bool, firstKeyMap map[byte]Pos) int {
+	var keyMap map[byte]Pos
+
+	moves := append([]byte{}, origLine...)
+
+	for i := 0; i < depth; i++ {
+		if i == 0 {
+			keyMap = firstKeyMap
+		} else {
+			keyMap = dirKeys
+		}
+
+		newMoves := []byte{}
+
+		var prev byte = 'A'
+		for _, c := range []byte(moves) {
+			dir := direction(keyMap[prev], keyMap[c])
+			pth := pathSS(keyMap[prev], keyMap[c], dir, keyMap, []byte{}, checkNext)
+			newMoves = append(newMoves, pth...)
+			prev = c
+		}
+		moves = []byte{}
+		moves = append(moves, newMoves...)
+		if checkNext {
+			fmt.Printf("%d. %v\n", i+1, string(moves))
+		}
+	}
+	// fmt.Printf("Result for %s: %s len: %d\n", origLine, string(moves), len(moves))
+	return len(moves)
+}
+
+func solveSS(input []string) int {
 	total := 0
-	prev := byte('A')
-	prev1 := byte('A')
-	prev2 := byte('A')
 
 	for _, line := range input {
-		// fmt.Print(line, ": ")
-		// prev3 := byte('A')
-		result := []byte{}
-		result1 := []byte{}
-		result2 := []byte{}
-		for _, c := range []byte(line) {
-			pth := path(prev, c, numKeys)
-			result1 = append(result1, pth...)
-			prev = c
-
-			for _, d := range pth {
-				pth2 := path(prev1, d, dirKeys)
-				result2 = append(result2, pth2...)
-				prev1 = d
-
-				for _, e := range pth2 {
-					pth3 := path(prev2, e, dirKeys)
-					// result = append(result, []byte(fmt.Sprintf("%c-%c:", prev2, e))...)
-					result = append(result, pth3...)
-					// result = append(result, '|')
-					prev2 = e
-
-					// for _, f := range pth3 {
-					// 	pth4 := path(prev3, e, dirKeys)
-					// 	prev3 = f
-					// }
-				}
-			}
-
-		}
-		// 159558 too high
-		fmt.Println("line:", line)
-		fmt.Printf("len(result) * getNum(line)=%d*%d=%d\n\n", len(result), getNum(line), len(result)*getNum(line))
-		total += len(result) * getNum(line)
+		fmt.Printf("%s:\n", line)
+		res := ss(line, 3, true, numKeys)
+		fmt.Printf("%s: %d*%d=%d\n", line, res, getNum(line), res*getNum(line))
+		total += res * getNum(line)
+		// fmt.Println("line:", line)
+		// fmt.Printf("len(result) * getNum(line)=%d*%d=%d\n\n", len(result), getNum(line), len(result)*getNum(line))
 		// fmt.Println(string(result))
-		// fmt.Println(string(result2))
-		// fmt.Println(string(result1))
 	}
 	return total
 }
@@ -181,5 +221,5 @@ func main() {
 
 	input := input()
 	// too high 159558
-	fmt.Println(solve(input))
+	fmt.Println(solveSS(input))
 }
