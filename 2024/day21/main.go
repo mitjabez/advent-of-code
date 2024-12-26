@@ -64,62 +64,52 @@ func abs(n int) int {
 	return n
 }
 
+func sign(a int) int {
+	if a > 0 {
+		return 1
+	} else if a < 0 {
+		return -1
+	}
+	return 0
+}
+
+func distance(src, dst Pos) int {
+	return abs(dst.x-src.x) + abs(dst.y-src.y)
+}
+
 func path(a byte, b byte, keyMap map[byte]Pos) []byte {
 	pA := keyMap[a]
 	pB := keyMap[b]
-	x := pB.x - pA.x
-	y := pB.y - pA.y
-	path := []byte{}
-	px := Pos{pA.x + x, pA.y}
-	py := Pos{pA.x, pA.y + y}
-	if px == keyMap['X'] {
+	distX := pB.x - pA.x
+	distY := pB.y - pA.y
+	xDir := map[int]byte{1: '>', -1: '<'}
+	yDir := map[int]byte{1: 'v', -1: '^'}
+
+	xpath := []byte{}
+	ypath := []byte{}
+	for i := 0; i < abs(distX); i++ {
+		xpath = append(xpath, xDir[sign(distX)])
+	}
+	for i := 0; i < abs(distY); i++ {
+		ypath = append(ypath, yDir[sign(distY)])
+	}
+
+	var path []byte
+	if (Pos{pB.x, pA.y}) == keyMap['X'] {
 		// move y first
-		for i := 0; i < abs(y); i++ {
-			if y > 0 {
-				path = append(path, 'v')
-			} else {
-				path = append(path, '^')
-			}
-		}
-		for i := 0; i < abs(x); i++ {
-			if x > 0 {
-				path = append(path, '>')
-			} else {
-				path = append(path, '<')
-			}
-		}
-	} else if py == keyMap['X'] {
+		path = append(ypath, xpath...)
+	} else if (Pos{pA.x, pB.y}) == keyMap['X'] {
 		// move x first
-		for i := 0; i < abs(x); i++ {
-			if x > 0 {
-				path = append(path, '>')
-			} else {
-				path = append(path, '<')
-			}
-		}
-		for i := 0; i < abs(y); i++ {
-			if y > 0 {
-				path = append(path, 'v')
-			} else {
-				path = append(path, '^')
-			}
-		}
+		path = append(xpath, ypath...)
 	} else {
-		for i := 0; i < abs(x); i++ {
-			if x > 0 {
-				path = append(path, '>')
-			} else {
-				path = append(path, '<')
-			}
-		}
-		for i := 0; i < abs(y); i++ {
-			if y > 0 {
-				path = append(path, 'v')
-			} else {
-				path = append(path, '^')
-			}
+		// Don't want to move right if possible
+		if distX < 0 {
+			path = append(xpath, ypath...)
+		} else {
+			path = append(ypath, xpath...)
 		}
 	}
+
 	return append(path, 'A')
 }
 
@@ -128,56 +118,32 @@ func getNum(line string) int {
 	return n
 }
 
+func sequence(line string, keyMap map[byte]Pos) string {
+	prev := byte('A')
+	result := []byte{}
+	for _, c := range []byte(line) {
+		pth := path(prev, c, keyMap)
+		result = append(result, pth...)
+		prev = c
+	}
+	return string(result)
+}
+
 func solve(input []string) int {
 	total := 0
-	prev := byte('A')
-	prev1 := byte('A')
-	prev2 := byte('A')
 
 	for _, line := range input {
-		// fmt.Print(line, ": ")
-		// prev3 := byte('A')
-		result := []byte{}
-		result1 := []byte{}
-		result2 := []byte{}
-		for _, c := range []byte(line) {
-			pth := path(prev, c, numKeys)
-			result1 = append(result1, pth...)
-			prev = c
-
-			for _, d := range pth {
-				pth2 := path(prev1, d, dirKeys)
-				result2 = append(result2, pth2...)
-				prev1 = d
-
-				for _, e := range pth2 {
-					pth3 := path(prev2, e, dirKeys)
-					// result = append(result, []byte(fmt.Sprintf("%c-%c:", prev2, e))...)
-					result = append(result, pth3...)
-					// result = append(result, '|')
-					prev2 = e
-
-					// for _, f := range pth3 {
-					// 	pth4 := path(prev3, e, dirKeys)
-					// 	prev3 = f
-					// }
-				}
-			}
-
-		}
-		// 159558 too high
-		fmt.Println("line:", line)
-		fmt.Printf("len(result) * getNum(line)=%d*%d=%d\n\n", len(result), getNum(line), len(result)*getNum(line))
-		total += len(result) * getNum(line)
-		// fmt.Println(string(result))
-		// fmt.Println(string(result2))
-		// fmt.Println(string(result1))
+		seq := sequence(line, numKeys)
+		seq1 := sequence(seq, dirKeys)
+		seq2 := sequence(seq1, dirKeys)
+		total += len(seq2) * getNum(line)
 	}
 	return total
 }
 
 func main() {
-	// fmt.Println(string(path('A', '2', numKeys)))
+	fmt.Printf("Distance between A and v %d\n", distance(dirKeys['A'], dirKeys['v']))
+	fmt.Printf("Distance between A and < %d\n", distance(dirKeys['A'], dirKeys['<']))
 
 	input := input()
 	// too high 159558
