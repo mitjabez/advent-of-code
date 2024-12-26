@@ -8,24 +8,7 @@ import (
 	"strings"
 )
 
-func input() []string {
-	scanner := bufio.NewScanner(os.Stdin)
-
-	var input = []string{}
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
-			continue
-		}
-		input = append(input, line)
-	}
-
-	if err := scanner.Err(); err != nil {
-		panic(fmt.Sprintf("Error reading standard input: %v", err))
-	}
-
-	return input
-}
+// Solved part 2 with help of https://observablehq.com/@jwolondon/advent-of-code-2024-day-21
 
 type Pos struct {
 	x, y int
@@ -73,8 +56,23 @@ func sign(a int) int {
 	return 0
 }
 
-func distance(src, dst Pos) int {
-	return abs(dst.x-src.x) + abs(dst.y-src.y)
+func input() []string {
+	scanner := bufio.NewScanner(os.Stdin)
+
+	var input = []string{}
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			continue
+		}
+		input = append(input, line)
+	}
+
+	if err := scanner.Err(); err != nil {
+		panic(fmt.Sprintf("Error reading standard input: %v", err))
+	}
+
+	return input
 }
 
 func path(a byte, b byte, keyMap map[byte]Pos) []byte {
@@ -102,7 +100,7 @@ func path(a byte, b byte, keyMap map[byte]Pos) []byte {
 		// move x first
 		path = append(xpath, ypath...)
 	} else {
-		// Don't want to move right if possible
+		// moving right is wasteful
 		if distX < 0 {
 			path = append(xpath, ypath...)
 		} else {
@@ -118,34 +116,52 @@ func getNum(line string) int {
 	return n
 }
 
-func sequence(line string, keyMap map[byte]Pos) string {
+func sequence(line string, keyMap map[byte]Pos, cache map[string][]byte) map[string]int {
 	prev := byte('A')
-	result := []byte{}
+	dstCnt := map[string]int{}
 	for _, c := range []byte(line) {
-		pth := path(prev, c, keyMap)
-		result = append(result, pth...)
+		cKey := string(prev) + string(c)
+		pth, ok := cache[cKey]
+		if !ok {
+			pth = path(prev, c, keyMap)
+			cache[cKey] = pth
+		}
+		dstCnt[string(pth)]++
 		prev = c
 	}
-	return string(result)
+	return dstCnt
 }
 
-func solve(input []string) int {
+func solve(input []string, depth int) int {
 	total := 0
+	cache := map[string][]byte{}
 
 	for _, line := range input {
-		seq := sequence(line, numKeys)
-		seq1 := sequence(seq, dirKeys)
-		seq2 := sequence(seq1, dirKeys)
-		total += len(seq2) * getNum(line)
+		cnt := sequence(line, numKeys, map[string][]byte{})
+
+		for i := 0; i < depth; i++ {
+			stepCnt := map[string]int{}
+			for pth, pthCount := range cnt {
+				newCnt := sequence(pth, dirKeys, cache)
+				for k, newCount := range newCnt {
+					stepCnt[k] += newCount * pthCount
+				}
+			}
+			cnt = stepCnt
+		}
+
+		totalLen := 0
+		for pth, v := range cnt {
+			totalLen += v * len(pth)
+		}
+
+		total += totalLen * getNum(line)
 	}
 	return total
 }
 
 func main() {
-	fmt.Printf("Distance between A and v %d\n", distance(dirKeys['A'], dirKeys['v']))
-	fmt.Printf("Distance between A and < %d\n", distance(dirKeys['A'], dirKeys['<']))
-
 	input := input()
-	// too high 159558
-	fmt.Println(solve(input))
+	fmt.Println(solve(input, 2))
+	fmt.Println(solve(input, 25))
 }
