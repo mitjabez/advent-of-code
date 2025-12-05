@@ -8,7 +8,8 @@ usage() {
   cat <<EOF
 Usage: $ME <year> <no of day>
 Creates a folder for and Advent of Code day and downloads in the inputs.
-AOC_COOKIE environment variable should be set so the script can download the inputs.
+AOC_COOKIE environment variable should be set (session=...) so the script can
+download the inputs.
 
 Options:
     year:           Year of the assignment.
