@@ -11,6 +11,7 @@ import (
 
 type IdRange struct {
 	start, end int
+	ignore     bool
 }
 
 type ByStart []IdRange
@@ -32,7 +33,7 @@ func input() ([]IdRange, []int) {
 		rs := strings.Split(line, "-")
 		r1, _ := strconv.Atoi(rs[0])
 		r2, _ := strconv.Atoi(rs[1])
-		ranges = append(ranges, IdRange{r1, r2})
+		ranges = append(ranges, IdRange{r1, r2, false})
 	}
 
 	for scanner.Scan() {
@@ -98,41 +99,33 @@ func solve(ranges []IdRange, ingredients []int) (int, int) {
 	p1 := 0
 	p2 := 0
 
+	// part1
 	for _, ingredient := range ingredients {
 		if search(ingredient, ranges) {
 			p1++
 		}
 	}
 
-	// 1-5
-	// 4-100
-	// 5-4=1
-	// high: 353787318143239
+	// part2
 	for i, r := range ranges {
-		p2 += r.end - r.start + 1
-		// fmt.Println(r)
-		if i > 0 {
-			overlapStart := false
-			overlapEnd := false
-			if r.start <= ranges[i-1].end {
-				p2 -= ranges[i-1].end - r.start + 1
-				overlapStart = true
-			}
-			// 1-5
-			// 2-3
-			// 5
-			// 7
-			// 7 - (5-2 +1) = 3
-			// 3 + (5 - 3 )= 5
-			if r.end < ranges[i-1].end {
-				p2 += ranges[i-1].end - r.end
-				overlapEnd = true
-			}
-			if overlapStart || overlapEnd {
-				// fmt.Printf("overlap start: %t, end %t\n", overlapStart, overlapEnd)
+		iPrev := i - 1
+		for iPrev >= 0 && ranges[iPrev].ignore {
+			iPrev--
+		}
+
+		if iPrev >= 0 {
+			if r.start <= ranges[iPrev].end {
+				newStart := ranges[iPrev].end + 1
+				if newStart > r.end {
+					r.ignore = true
+					ranges[i] = r
+					continue
+				}
+				r.start = newStart
 			}
 		}
-		// fmt.Printf("range: %2v, p2: %d\n", r, p2)
+
+		p2 += r.end - r.start + 1
 	}
 
 	return p1, p2
