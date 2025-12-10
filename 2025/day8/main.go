@@ -3,9 +3,9 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"math"
 	"os"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -14,14 +14,26 @@ type Pos struct {
 	x, y, z int
 }
 
-func (pos1 Pos) distance(pos2 Pos) int {
-	dist := math.Sqrt(math.Pow(float64(pos2.x-pos1.x), 2) +
-		math.Pow(float64(pos2.y-pos1.y), 2) +
-		math.Pow(float64(pos2.z-pos1.z), 2))
-	return int(dist)
+type Distance struct {
+	a, b     Pos
+	distance int
 }
 
-func input() []Pos {
+func pow2(a int) int {
+	return a * a
+}
+
+func distance(pos1 Pos, pos2 Pos) int {
+	return pow2(pos2.x-pos1.x) + pow2(pos2.y-pos1.y) + pow2(pos2.z-pos1.z)
+}
+
+type ByDistance []Distance
+
+func (a ByDistance) Len() int           { return len(a) }
+func (a ByDistance) Less(i, j int) bool { return a[i].distance < a[j].distance }
+func (a ByDistance) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+
+func input() []Distance {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	boxes := []Pos{}
@@ -41,88 +53,61 @@ func input() []Pos {
 		panic(fmt.Sprintf("Error reading standard input: %v", err))
 	}
 
-	return boxes
-}
-
-func closest(boxes map[Pos][]Pos) (Pos, Pos, int) {
-	min := math.MaxInt
-	var minPair [2]Pos
-	nJoined := 0
-	for box := range boxes {
-		for destBox, destAdj := range boxes {
-			if box == destBox || slices.Contains(destAdj, box) {
+	distances := []Distance{}
+	for i, a := range boxes {
+		for j, b := range boxes {
+			if i >= j {
 				continue
 			}
-
-			nJoined++
-			d := box.distance(destBox)
-			if d < min {
-				minPair[0] = box
-				minPair[1] = destBox
-				min = d
-			}
-		}
-	}
-	return minPair[0], minPair[1], nJoined
-}
-
-func circuitSize(box Pos, boxes map[Pos][]Pos, visited map[Pos]bool, size int) int {
-	visited[box] = true
-
-	for _, adj := range boxes[box] {
-		if visited[adj] {
-			continue
-		}
-
-		// fmt.Printf("->%v", adj)
-		visited[adj] = true
-		size++
-		if len(boxes[adj]) > 0 {
-			size += circuitSize(adj, boxes, visited, 0)
+			distances = append(distances, Distance{a, b, distance(a, b)})
 		}
 	}
 
-	return size
+	sort.Sort(ByDistance(distances))
+
+	return distances
 }
 
-func solve(arrBoxes []Pos) (int, int) {
+func solve(distances []Distance) (int, int) {
 	p1 := 0
 	p2 := 0
 
-	boxes := map[Pos][]Pos{}
-	for _, b := range arrBoxes {
-		boxes[b] = make([]Pos, 0)
-	}
-
-	// var lb1 Pos
-	// var lb2 Pos
-	for i := range 100000 {
-		b1, b2, nJoined := closest(boxes)
-
-		boxes[b1] = append(boxes[b1], b2)
-		boxes[b2] = append(boxes[b2], b1)
-		visited := map[Pos]bool{}
-		cs := circuitSize(b1, boxes, visited, 1)
-		fmt.Printf("#%d. joined=%d. size: %d\n", i, nJoined, cs)
-		if cs == len(boxes) {
-			fmt.Println(b1, b2)
-			p2 = b1.x * b2.x
-			break
+	circuits := []map[Pos]bool{}
+	for i := range 1000 {
+		d := distances[i]
+		found := []int{}
+		for j, c := range circuits {
+			if c[d.a] || c[d.b] {
+				found = append(found, j)
+				c[d.a] = true
+				c[d.b] = true
+			}
+		}
+		if len(found) == 0 {
+			m := map[Pos]bool{d.a: true, d.b: true}
+			circuits = append(circuits, m)
+		} else {
+			// Merge
+			for k := 1; k < len(found); k++ {
+				for c := range circuits[found[k]] {
+					circuits[found[0]][c] = true
+				}
+				circuits[found[k]] = make(map[Pos]bool)
+			}
 		}
 	}
 
-	circuitSizes := []int{}
-	visited := map[Pos]bool{}
-	for box := range boxes {
-		// fmt.Printf("box %v:\n", box)
-		size := circuitSize(box, boxes, visited, 1)
-		// fmt.Printf("\nsize: %d\n", size)
-		fmt.Printf("------------------------------------------------\n")
-		circuitSizes = append(circuitSizes, size)
+	lens := []int{}
+	for _, c := range circuits {
+		// for p := range c {
+		// 	fmt.Printf("%v->", p)
+		// }
+		// fmt.Printf(" size: %d\n", len(c))
+		lens = append(lens, len(c))
 	}
-	slices.Sort(circuitSizes)
-	p1 = circuitSizes[len(circuitSizes)-1] * circuitSizes[len(circuitSizes)-2] * circuitSizes[len(circuitSizes)-3]
+	slices.Sort(lens)
 
+	p1 = lens[len(lens)-1] * lens[len(lens)-2] * lens[len(lens)-3]
 	return p1, p2
 }
 
