@@ -74,7 +74,7 @@ func circuitSize(box Pos, boxes map[Pos][]Pos, visited map[Pos]bool, size int) i
 			continue
 		}
 
-		fmt.Printf("->%v", adj)
+		// fmt.Printf("->%v", adj)
 		visited[adj] = true
 		size++
 		if len(boxes[adj]) > 0 {
@@ -94,39 +94,29 @@ func solve(arrBoxes []Pos) (int, int) {
 		boxes[b] = make([]Pos, 0)
 	}
 
-	for i := range 1000 {
+	// var lb1 Pos
+	// var lb2 Pos
+	for i := range 100000 {
 		b1, b2, nJoined := closest(boxes)
-		fmt.Printf("#%d. joined=%d\n", i, nJoined)
-		if nJoined == 0 {
-			break
-		}
+
 		boxes[b1] = append(boxes[b1], b2)
 		boxes[b2] = append(boxes[b2], b1)
+		visited := map[Pos]bool{}
+		cs := circuitSize(b1, boxes, visited, 1)
+		fmt.Printf("#%d. joined=%d. size: %d\n", i, nJoined, cs)
+		if cs == len(boxes) {
+			fmt.Println(b1, b2)
+			p2 = b1.x * b2.x
+			break
+		}
 	}
 
 	circuitSizes := []int{}
-	// too high 243024
-	//          122430
-	// too high 324360
-	// testBoxes := map[Pos][]Pos{}
-	// testBoxes[Pos{1, 1, 1}] = []Pos{
-	// 	{2, 1, 1},
-	// 	{3, 1, 1},
-	// }
-	// testBoxes[Pos{2, 1, 1}] = []Pos{
-	// 	{1, 1, 1},
-	// }
-	// testBoxes[Pos{3, 1, 1}] = []Pos{
-	// 	{1, 1, 1},
-	// }
-	// testBoxes[Pos{4, 1, 1}] = []Pos{
-	// 	{1, 1, 1},
-	// }
 	visited := map[Pos]bool{}
 	for box := range boxes {
-		fmt.Printf("box %v:\n", box)
+		// fmt.Printf("box %v:\n", box)
 		size := circuitSize(box, boxes, visited, 1)
-		fmt.Printf("\nsize: %d\n", size)
+		// fmt.Printf("\nsize: %d\n", size)
 		fmt.Printf("------------------------------------------------\n")
 		circuitSizes = append(circuitSizes, size)
 	}
