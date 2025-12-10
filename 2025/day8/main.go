@@ -68,21 +68,46 @@ func input() []Distance {
 	return distances
 }
 
+func circuitLen(circuits []map[Pos]bool) int {
+	lens := []int{}
+	for _, c := range circuits {
+		lens = append(lens, len(c))
+	}
+	slices.Sort(lens)
+
+	return lens[len(lens)-1] * lens[len(lens)-2] * lens[len(lens)-3]
+}
+
 func solve(distances []Distance) (int, int) {
 	p1 := 0
 	p2 := 0
 
+	posMap := map[Pos]bool{}
+	for _, p := range distances {
+		posMap[p.a] = true
+		posMap[p.b] = true
+	}
+	posCount := len(posMap)
+
 	circuits := []map[Pos]bool{}
-	for i := range 1000 {
+	for i := range 10000 {
 		d := distances[i]
 		found := []int{}
 		for j, c := range circuits {
+			if len(c) == posCount && p2 == 0 {
+				p2 = distances[i-1].a.x * distances[i-1].b.x
+			}
 			if c[d.a] || c[d.b] {
 				found = append(found, j)
 				c[d.a] = true
 				c[d.b] = true
 			}
 		}
+
+		if p2 > 0 {
+			break
+		}
+
 		if len(found) == 0 {
 			m := map[Pos]bool{d.a: true, d.b: true}
 			circuits = append(circuits, m)
@@ -95,19 +120,11 @@ func solve(distances []Distance) (int, int) {
 				circuits[found[k]] = make(map[Pos]bool)
 			}
 		}
+		if i == 1000 {
+			p1 = circuitLen(circuits)
+		}
 	}
 
-	lens := []int{}
-	for _, c := range circuits {
-		// for p := range c {
-		// 	fmt.Printf("%v->", p)
-		// }
-		// fmt.Printf(" size: %d\n", len(c))
-		lens = append(lens, len(c))
-	}
-	slices.Sort(lens)
-
-	p1 = lens[len(lens)-1] * lens[len(lens)-2] * lens[len(lens)-3]
 	return p1, p2
 }
 
